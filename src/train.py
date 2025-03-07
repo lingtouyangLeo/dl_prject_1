@@ -7,14 +7,16 @@ import resnet
 import os
 from myutils import unpickle  
 import numpy as np
+import pandas as pd
+
 
 # Select device (use GPU if available, otherwise use CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-data_batches = ["../data/data_batch_1", "../data/data_batch_2", 
-                "../data/data_batch_3", "../data/data_batch_4", "../data/data_batch_5"]
-test_batch = "../data/test_batch"
+data_batches = ["./data/data_batch_1", "./data/data_batch_2", 
+                "./data/data_batch_3", "./data/data_batch_4", "./data/data_batch_5"]
+test_batch = "./data/test_batch"
 
 train_data, train_labels = [], []
 
@@ -38,12 +40,10 @@ test_labels = np.array(test_dict[b'labels'])
 transform_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),  # Random cropping to 32x32
     transforms.RandomHorizontalFlip(),  # 50% chance of horizontal flip
-    transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))  # Normalize to range (-1, 1)
 ])
 
 transform_test = transforms.Compose([
-    transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 
@@ -74,7 +74,7 @@ test_dataset = CIFAR10Dataset(test_data, test_labels, transform=transform_test)
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=2)
 testloader = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=False, num_workers=2)
 
-model = resnet.ResNet8().to(device)  
+model = resnet.ResNet10().to(device)  
 print("Total Model Parameters:", sum(p.numel() for p in model.parameters()))
 
 criterion = nn.CrossEntropyLoss()  # Cross-entropy loss for classification
@@ -123,12 +123,35 @@ def test(model, testloader, criterion, device):
     print(f"Test Accuracy: {test_acc:.2f}%")
     return test_acc
 
-EPOCHS = 20  # Train for 20 epochs
-train(model, trainloader, optimizer, criterion, device, epochs=EPOCHS)
 
-test_accuracy = test(model, testloader, criterion, device)
+# for submission on kaggle
+def generate_submission(model, testloader, device, output_file="submission.csv"):
+    model.eval()  # Set model to evaluation mode
+    predictions = []
 
-os.makedirs("../model", exist_ok=True)  # Ensure model directory exists
-model_path = f"../model/resnet8.pth"
-torch.save(model.state_dict(), model_path)
-print(f"Model saved at: {model_path}")
+    with torch.no_grad():
+        for inputs, _ in testloader:  # Test data has no labels
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs, 1)  # Get predicted labels
+            predictions.extend(predicted.cpu().numpy())
+
+    # Create a DataFrame for submission
+    submission_df = pd.DataFrame({"id": range(len(predictions)), "label": predictions})
+
+    # Save as CSV
+    submission_df.to_csv(output_file, index=False)
+    print(f"Submission file saved: {output_file}")
+
+
+if __name__ == '__main__':
+    EPOCHS = 20  # Train for 20 epochs
+    train(model, trainloader, optimizer, criterion, device, epochs=EPOCHS)
+
+    test_accuracy = test(model, testloader, criterion, device)
+
+    os.makedirs("./model", exist_ok=True)  # Ensure model directory exists
+    model_path = f"./model/resnet10.pth"
+    torch.save(model.state_dict(), model_path)
+    print(f"Model saved at: {model_path}")
+    generate_submission(model, testloader, device)
