@@ -12,9 +12,9 @@ import numpy as np
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-data_batches = ["./data/data_batch_1", "./data/data_batch_2", 
-                "./data/data_batch_3", "./data/data_batch_4", "../data/data_batch_5"]
-test_batch = "./data/test_batch"
+data_batches = ["../data/data_batch_1", "../data/data_batch_2", 
+                "../data/data_batch_3", "../data/data_batch_4", "../data/data_batch_5"]
+test_batch = "../data/test_batch"
 
 train_data, train_labels = [], []
 
