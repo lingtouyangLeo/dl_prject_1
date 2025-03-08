@@ -67,4 +67,5 @@ def ResNet10():
 def ResNet14():
     return ResNet([2, 2, 2]) # 14 layers
 
-
+def ResNet18():
+    return ResNet([2, 2, 2, 2]) # 18 layers

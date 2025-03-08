@@ -74,7 +74,7 @@ test_dataset = CIFAR10Dataset(test_data, test_labels, transform=transform_test)
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=2)
 testloader = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=False, num_workers=2)
 
-model = resnet.ResNet10().to(device)  
+model = resnet.ResNet18().to(device)  
 print("Total Model Parameters:", sum(p.numel() for p in model.parameters()))
 
 criterion = nn.CrossEntropyLoss()  # Cross-entropy loss for classification
@@ -137,7 +137,7 @@ def generate_submission(model, testloader, device, output_file="submission.csv")
             predictions.extend(predicted.cpu().numpy())
 
     # Create a DataFrame for submission
-    submission_df = pd.DataFrame({"id": range(len(predictions)), "label": predictions})
+    submission_df = pd.DataFrame({"ID": range(len(predictions)), "Label": predictions})
 
     # Save as CSV
     submission_df.to_csv(output_file, index=False)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     test_accuracy = test(model, testloader, criterion, device)
 
     os.makedirs("./model", exist_ok=True)  # Ensure model directory exists
-    model_path = f"./model/resnet10.pth"
+    model_path = f"./model/resnet18.pth"
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")
     generate_submission(model, testloader, device)
