@@ -48,9 +48,9 @@ with torch.no_grad():
 
 predictions.sort(key=lambda x: x[0])
 
-with open('submission_epoch90.csv', 'w') as f:
+with open('submission_epoch150.csv', 'w') as f:
     f.write('ID,Labels\n')
     for idx, label in predictions:
         f.write(f'{idx},{label}\n')
 
-print('submission_epoch90.csv 文件已成功生成，可以提交到 Kaggle!')
+print('submission_epoch150.csv 文件已成功生成，可以提交到 Kaggle!')
