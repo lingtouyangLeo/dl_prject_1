@@ -20,7 +20,7 @@ val_loader = DataLoader(val_set, batch_size=128, shuffle=False)
 model = ResNetVariant(num_classes=10).to(device)
 
 # 加载第90个epoch的权重
-model.load_state_dict(torch.load('resnet_epoch90.pth'))
+model.load_state_dict(torch.load('resnet_epoch150.pth'))
 
 criterion = torch.nn.CrossEntropyLoss()
 
