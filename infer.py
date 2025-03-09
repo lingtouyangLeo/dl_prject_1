@@ -1,21 +1,27 @@
 import torch
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from model.resnet_variant import ResNetVariant
-from utils import val_transform
 import pickle
 from PIL import Image
-import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# 模型加载（使用最佳权重）
 model = ResNetVariant(num_classes=10).to(device)
-model.load_state_dict(torch.load('resnet_epoch10.pth'))
+model.load_state_dict(torch.load('resnet_epoch180.pth'))  # 确保这是你最好的权重
 model.eval()
+
+# 测试集的数据预处理（务必与训练时完全一致）
+val_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465),
+                         (0.247, 0.243, 0.261))
+])
 
 with open('data/cifar_test_nolabel.pkl', 'rb') as f:
     test_dict = pickle.load(f)
 
-# 修改为字节字符串索引数据
 test_images = test_dict[b'data']
 test_ids = test_dict[b'ids']
 
@@ -48,9 +54,9 @@ with torch.no_grad():
 
 predictions.sort(key=lambda x: x[0])
 
-with open('submission_epoch150.csv', 'w') as f:
+with open('submission_corrected.csv', 'w') as f:
     f.write('ID,Labels\n')
     for idx, label in predictions:
         f.write(f'{idx},{label}\n')
 
-print('submission_epoch150.csv 文件已成功生成，可以提交到 Kaggle!')
+print('submission_epoch180.csv 已成功生成！请立即提交到 Kaggle。')
