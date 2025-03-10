@@ -11,8 +11,8 @@ class BasicBlock(nn.Module):
         初始化基本残差块。
         参数:
             in_channels: 输入通道数
-            out_channels: 输出通道数 (BasicBlock不会扩张通道，因此输出通道=设定通道)
-            stride: 第一个卷积层的步幅。对于下采样块，stride=2；否则stride=1
+            out_channels: 输出通道数 (BasicBlock不会扩张通道, 因此输出通道=设定通道)
+            stride: 第一个卷积层的步幅。对于下采样块, stride=2; 否则stride=1
             downsample: 下采样层，用于在跳跃连接中调整尺寸或通道数（如果需要）
         """
         super(BasicBlock, self).__init__()
