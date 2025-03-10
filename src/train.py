@@ -2,9 +2,10 @@ import torch
 import torch.optim as optim
 from torchvision import datasets
 from torch.utils.data import DataLoader, random_split
-from utils import train_transform, val_transform, generate_submission_csv
+from utils import train_transform, val_transform
 from resnet_variant import ResNetVariant
 from torch.optim.lr_scheduler import LambdaLR
+import math
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -42,15 +43,15 @@ def warmup_cosine_lr(epoch, warmup_epochs=5, total_epochs=100):
         # 预热阶段：学习率从 0 线性增加到设定学习率
         return epoch / warmup_epochs
     # 余弦退火阶段
-    return 0.5 * (1 + torch.cos((epoch - warmup_epochs) / (total_epochs - warmup_epochs) * 3.1415926535))
+    return 0.5 * (1 + torch.cos(torch.tensor((epoch - warmup_epochs) / (total_epochs - warmup_epochs) * math.pi)))
 
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: warmup_cosine_lr(epoch, warmup_epochs=5, total_epochs=100))
+scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: warmup_cosine_lr(epoch, warmup_epochs=5, total_epochs=300))
 
 
 start_epoch = 0
-num_epochs = 100
+num_epochs = 300
 
 for epoch in range(start_epoch, num_epochs):
     model.train()

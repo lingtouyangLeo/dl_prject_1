@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 模型加载（使用最佳权重）
 model = ResNetVariant(num_classes=10).to(device)
-model.load_state_dict(torch.load('resnet_epoch100.pth'))  # 确保这是你最好的权重
+model.load_state_dict(torch.load('resnet_epoch200.pth'))  # 确保这是你最好的权重
 model.eval()
 
 # 测试集的数据预处理（务必与训练时完全一致）
@@ -54,9 +54,9 @@ with torch.no_grad():
 
 predictions.sort(key=lambda x: x[0])
 
-with open('submission_epoch100.csv', 'w') as f:
+with open('submission_epoch200.csv', 'w') as f:
     f.write('ID,Labels\n')
     for idx, label in predictions:
         f.write(f'{idx},{label}\n')
 
-print('submission_epoch100.csv 已成功生成！请立即提交到 Kaggle。')
+print('submission_epoch200.csv 已成功生成！请立即提交到 Kaggle。')
