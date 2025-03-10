@@ -1,0 +1,15 @@
+# 忽略 Python 生成的缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 忽略 Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# 忽略 VSCode 相关文件
+.vscode/
+
+# 忽略虚拟环境
+venv/
+.env/
