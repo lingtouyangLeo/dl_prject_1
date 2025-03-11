@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 模型加载（使用最佳权重）
 model = ResNetVariant(num_classes=10).to(device)
-model.load_state_dict(torch.load('resnet_epoch200.pth'))  # 确保这是你最好的权重
+model.load_state_dict(torch.load('best_model.pth'))  # 确保这是你最好的权重
 model.eval()
 
 # 测试集的数据预处理（务必与训练时完全一致）

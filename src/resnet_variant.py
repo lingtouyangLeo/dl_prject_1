@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class BasicBlock(nn.Module):
-    """基本残差块，每个块包含两个3x3卷积层。"""
+    """基本残差块, 每个块包含两个3x3卷积层。"""
     expansion = 1  # BasicBlock不改变通道数（扩张系数为1）
 
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
@@ -47,8 +47,8 @@ class BasicBlock(nn.Module):
 
 class ResNetVariant(nn.Module):
     """
-    ResNet变体模型：
-    - 总体结构基于ResNet-18，但通道数缩减为 (40, 80, 160, 320)，从而将参数量控制在约5百万以内 (约4.4M)。
+    ResNet变体模型:
+    - 总体结构基于ResNet-18, 但通道数缩减为 (40, 80, 160, 320), 从而将参数量控制在约5百万以内 (约4.4M)。
     - 适用于CIFAR-10的32x32输入。
     """
 

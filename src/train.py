@@ -52,6 +52,8 @@ scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: warmup_cosine_lr(epoch, 
 
 start_epoch = 0
 num_epochs = 300
+best_acc = 0.0  # 记录最高准确率
+best_epoch = 0  # 记录最高准确率的 epoch
 
 for epoch in range(start_epoch, num_epochs):
     model.train()
@@ -59,7 +61,7 @@ for epoch in range(start_epoch, num_epochs):
     for images, labels in train_loader:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
-        loss = torch.nn.CrossEntropyLoss()(model(images), labels)
+        loss = criterion(model(images), labels)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -78,7 +80,15 @@ for epoch in range(start_epoch, num_epochs):
     acc = correct / total
     print(f'Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {acc:.4%}')
 
-    # 定期保存训练的模型权重，比如每10个epoch保存一次
-    if (epoch + 1) % 10 == 0 or epoch == num_epochs - 1:
-        torch.save(model.state_dict(), f'resnet_epoch{epoch+1}.pth')
-        print(f"Epoch {epoch+1}: 模型已保存。")
+    if acc > best_acc:
+        best_acc = acc
+        best_epoch = epoch + 1
+        torch.save(model.state_dict(), f"best_model.pth")  # 保存最优模型
+        print(f"🔥 New Best Model Saved! Epoch {best_epoch}, Best Acc: {best_acc:.4%}")
+
+    print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {acc:.4%}, Best Acc: {best_acc:.4%}, LR: {scheduler.get_last_lr()[0]:.6f}")
+
+    # # 定期保存训练的模型权重，比如每10个epoch保存一次
+    # if (epoch + 1) % 10 == 0 or epoch == num_epochs - 1:
+    #     torch.save(model.state_dict(), f'resnet_epoch{epoch+1}.pth')
+    #     print(f"Epoch {epoch+1}: 模型已保存。")
