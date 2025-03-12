@@ -1,53 +1,15 @@
 import os
-import pickle
 import numpy as np
-from PIL import Image
-
 import torch
 import torch.optim as optim
-from torch.utils.data import DataLoader, Subset, Dataset
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
-from torchvision import transforms
-from model.resnet_variant import ResNetVariant
+from resnet_variant import ResNetVariant
+from utils import CIFAR10Dataset, unpickle, augmented_transform, TransformWrapper
 
-
-def unpickle(file):
-    with open(file, 'rb') as fo:
-        data_dict = pickle.load(fo, encoding='bytes')
-    return data_dict
-
-augmented_transform = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
-                         std=[0.2023, 0.1994, 0.2010])
-])
-
-class CIFAR10Dataset(Dataset):
-    def __init__(self, data, labels, transform=None):
-        self.data = data
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        row = self.data[idx]
-        r = row[0:1024].reshape(32, 32)
-        g = row[1024:2048].reshape(32, 32)
-        b = row[2048:3072].reshape(32, 32)
-        img = np.stack([r, g, b], axis=2)
-        img = Image.fromarray(img)
-        if self.transform:
-            img = self.transform(img)
-        label = self.labels[idx]
-        return img, label
-
+# Define dataset directory and load CIFAR-10 batch files
 data_dir = './data/cifar-10-batches-py'
 batch_files = [os.path.join(data_dir, f'data_batch_{i}') for i in range(1, 6)]
-
 
 data_list = []
 labels_list = []
@@ -57,45 +19,45 @@ for file in batch_files:
     labels_list.extend(batch[b'labels'])
 data_array = np.concatenate(data_list, axis=0)
 
+# create the full dataset to split into training and validation sets
 full_dataset = CIFAR10Dataset(data_array, labels_list, transform=None)
-
-
-train_indices = list(range(45000))
-val_indices = list(range(45000, 50000))
-train_subset = Subset(full_dataset, train_indices)
+train_indices = list(range(45000))                   # 45000 training samples
+val_indices = list(range(45000, 50000))              # 5000 validation samples
+train_subset = Subset(full_dataset, train_indices)   
 val_subset = Subset(full_dataset, val_indices)
 
-class TransformWrapper(Dataset):
-    def __init__(self, subset, transform):
-        self.subset = subset
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.subset)
-
-    def __getitem__(self, idx):
-        img, label = self.subset[idx]
-        if self.transform:
-            img = self.transform(img)
-        return img, label
-
+# Apply transformations to training and validation datasets
 train_dataset = TransformWrapper(train_subset, augmented_transform)
 val_dataset = TransformWrapper(val_subset, augmented_transform)
 
+# Create data loaders for training and validation
 train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
 
+# Define device (GPU if available, else CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"Using device: {device}")
+# print(torch.cuda.is_available())  # should return True
+# print(torch.cuda.device_count())  # Check the number of available GPUs
+# print(torch.cuda.get_device_name(0)) # Get the GPU name
+# print(torch.__version__)        # Check PyTorch version
+# print(torch.version.cuda)     # Check CUDA version
+
+# Initialize model and move to device
 model = ResNetVariant(num_classes=10).to(device)
 
+# Define loss function, optimizer, and learning rate scheduler
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
+# Training loop settings
 start_epoch = 1
 num_epochs = 200
 
+# Training and validation loop
 for epoch in range(start_epoch, num_epochs + 1):
+    # ------------------------------ Training ------------------------------
     model.train()
     running_loss = 0.0
     train_pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{num_epochs} Training", leave=False)
@@ -108,8 +70,9 @@ for epoch in range(start_epoch, num_epochs + 1):
         optimizer.step()
         running_loss += loss.item()
         train_pbar.set_postfix(loss=running_loss / (train_pbar.n + 1))
-    scheduler.step()
+    scheduler.step() # Update learning rate using scheduler(cosine annealing)
 
+    # ------------------------------ Validation ------------------------------
     model.eval()
     correct, total = 0, 0
     val_pbar = tqdm(val_loader, desc=f"Epoch {epoch}/{num_epochs} Validation", leave=False)
@@ -123,6 +86,7 @@ for epoch in range(start_epoch, num_epochs + 1):
     acc = correct / total
     print(f'Epoch {epoch}, Loss: {running_loss / len(train_loader):.4f}, Acc: {acc:.4%}')
 
+    # Save model checkpoint every 10 epochs
     if epoch % 10 == 0 or epoch == num_epochs:
         torch.save(model.state_dict(), f'resnet_epoch{epoch}.pth')
-        print(f"Epoch {epoch}: 模型已保存。")
+        print(f"Epoch {epoch}: Model saved")
