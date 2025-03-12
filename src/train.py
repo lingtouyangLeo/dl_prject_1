@@ -1,94 +1,128 @@
+import os
+import pickle
+import numpy as np
+from PIL import Image
+
 import torch
 import torch.optim as optim
-from torchvision import datasets
-from torch.utils.data import DataLoader, random_split
-from utils import train_transform, val_transform
-from resnet_variant import ResNetVariant
-from torch.optim.lr_scheduler import LambdaLR
-import math
+from torch.utils.data import DataLoader, Subset, Dataset
+from tqdm import tqdm
+from torchvision import transforms
+from model.resnet_variant import ResNetVariant
+
+
+def unpickle(file):
+    with open(file, 'rb') as fo:
+        data_dict = pickle.load(fo, encoding='bytes')
+    return data_dict
+
+augmented_transform = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
+                         std=[0.2023, 0.1994, 0.2010])
+])
+
+class CIFAR10Dataset(Dataset):
+    def __init__(self, data, labels, transform=None):
+        self.data = data
+        self.labels = labels
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        row = self.data[idx]
+        r = row[0:1024].reshape(32, 32)
+        g = row[1024:2048].reshape(32, 32)
+        b = row[2048:3072].reshape(32, 32)
+        img = np.stack([r, g, b], axis=2)
+        img = Image.fromarray(img)
+        if self.transform:
+            img = self.transform(img)
+        label = self.labels[idx]
+        return img, label
+
+data_dir = './data/cifar-10-batches-py'
+batch_files = [os.path.join(data_dir, f'data_batch_{i}') for i in range(1, 6)]
+
+
+data_list = []
+labels_list = []
+for file in batch_files:
+    batch = unpickle(file)
+    data_list.append(batch[b'data'])
+    labels_list.extend(batch[b'labels'])
+data_array = np.concatenate(data_list, axis=0)
+
+full_dataset = CIFAR10Dataset(data_array, labels_list, transform=None)
+
+
+train_indices = list(range(45000))
+val_indices = list(range(45000, 50000))
+train_subset = Subset(full_dataset, train_indices)
+val_subset = Subset(full_dataset, val_indices)
+
+class TransformWrapper(Dataset):
+    def __init__(self, subset, transform):
+        self.subset = subset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.subset)
+
+    def __getitem__(self, idx):
+        img, label = self.subset[idx]
+        if self.transform:
+            img = self.transform(img)
+        return img, label
+
+train_dataset = TransformWrapper(train_subset, augmented_transform)
+val_dataset = TransformWrapper(val_subset, augmented_transform)
+
+train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-# print(torch.cuda.is_available())  # 应该返回 True
-# print(torch.cuda.device_count())  # 检查可用的 GPU 数量
-# print(torch.cuda.get_device_name(0))  # 获取 GPU 名称
-# print(torch.__version__)
-# print(torch.version.cuda)  # 检查 CUDA 版本
-
-# 加载数据集
-full_train_set = datasets.CIFAR10(root='./data', train=True, download=True, transform=None)
-train_set, val_set = random_split(full_train_set, [45000, 5000])
-train_set.dataset.transform = train_transform
-val_set.dataset.transform = val_transform
-
-train_loader = DataLoader(train_set, batch_size=128, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=128, shuffle=False)
-
-# 定义模型
 model = ResNetVariant(num_classes=10).to(device)
 
-# 加载第90个epoch的权重
-# model.load_state_dict(torch.load('resnet_epoch150.pth'))
-def warmup_cosine_lr(epoch, warmup_epochs=5, total_epochs=100):
-    """
-    学习率预热 + 余弦退火调度
-    参数：
-        epoch: 当前的训练 epoch
-        warmup_epochs: 预热的 epoch 数量（例如前 5 轮）
-        total_epochs: 总训练轮数
-    返回：
-        当前 epoch 对应的学习率缩放因子
-    """
-    if epoch < warmup_epochs:
-        # 预热阶段：学习率从 0 线性增加到设定学习率
-        return epoch / warmup_epochs
-    # 余弦退火阶段
-    return 0.5 * (1 + torch.cos(torch.tensor((epoch - warmup_epochs) / (total_epochs - warmup_epochs) * math.pi)))
-
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: warmup_cosine_lr(epoch, warmup_epochs=5, total_epochs=300))
+optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
+start_epoch = 1
+num_epochs = 200
 
-start_epoch = 0
-num_epochs = 300
-best_acc = 0.0  # 记录最高准确率
-best_epoch = 0  # 记录最高准确率的 epoch
-
-for epoch in range(start_epoch, num_epochs):
+for epoch in range(start_epoch, num_epochs + 1):
     model.train()
-    running_loss = 0
-    for images, labels in train_loader:
+    running_loss = 0.0
+    train_pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{num_epochs} Training", leave=False)
+    for images, labels in train_pbar:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
-        loss = criterion(model(images), labels)
+        outputs = model(images)
+        loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-
+        train_pbar.set_postfix(loss=running_loss / (train_pbar.n + 1))
     scheduler.step()
 
     model.eval()
     correct, total = 0, 0
+    val_pbar = tqdm(val_loader, desc=f"Epoch {epoch}/{num_epochs} Validation", leave=False)
     with torch.no_grad():
-        for images, labels in val_loader:
+        for images, labels in val_pbar:
             images, labels = images.to(device), labels.to(device)
-            preds = model(images).argmax(1)
+            preds = model(images).argmax(dim=1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
-
+            val_pbar.set_postfix(acc=correct / total)
     acc = correct / total
-    print(f'Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {acc:.4%}')
+    print(f'Epoch {epoch}, Loss: {running_loss / len(train_loader):.4f}, Acc: {acc:.4%}')
 
-    if acc > best_acc:
-        best_acc = acc
-        best_epoch = epoch + 1
-        torch.save(model.state_dict(), f"best_model.pth")  # 保存最优模型
-        print(f"🔥 New Best Model Saved! Epoch {best_epoch}, Best Acc: {best_acc:.4%}")
-
-    print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {acc:.4%}, Best Acc: {best_acc:.4%}, LR: {scheduler.get_last_lr()[0]:.6f}")
-
-    # # 定期保存训练的模型权重，比如每10个epoch保存一次
-    # if (epoch + 1) % 10 == 0 or epoch == num_epochs - 1:
-    #     torch.save(model.state_dict(), f'resnet_epoch{epoch+1}.pth')
-    #     print(f"Epoch {epoch+1}: 模型已保存。")
+    if epoch % 10 == 0 or epoch == num_epochs:
+        torch.save(model.state_dict(), f'resnet_epoch{epoch}.pth')
+        print(f"Epoch {epoch}: 模型已保存。")
