@@ -38,7 +38,7 @@ This will train the model for 300 epochs and save the best checkpoint as resnetV
 ## Run Inference
 To test the trained model on new images:
 ```bash
-python src/infer.py --model saved_models/resnetVariant_best.pth
+python src/infer.py --model resnetVariant_best.pth
 ```
 
 ---
@@ -51,8 +51,8 @@ python src/infer.py --model saved_models/resnetVariant_best.pth
 ---
 
 ## Training Logs & Results
-- Training logs are stored in `logs/log.txt`.
-- Training loss and validation accuracy curves are available in the `results/` folder.
+- Training logs are stored in `log.txt`.
+- Training loss, lerning rate and validation accuracy curves are available in the main folder.
 
 ---
 
