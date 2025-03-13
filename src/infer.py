@@ -50,4 +50,4 @@ with open('submission_corrected.csv', 'w') as f:
     for idx, label in predictions:
         f.write(f'{idx},{label}\n')
 
-print('Output successfully saved to submission_corrected.csv')
+print('Output successfully saved to submission.csv')
