@@ -4,21 +4,28 @@ This project implements a modified ResNet architecture for image classification 
 ---
 
 ## Project Structure
-This repository contains all necessary files for training, evaluating, and analyzing our modified ResNet model.
-📂 data/ - Directory containing the CIFAR-10 dataset.
-📂 old_files/ - Archive of previous versions and backup files.
-📂 src/ - Source code including model architecture, training, and inference scripts.
-📄 .gitignore - Specifies files to be ignored by Git version control.
-📄 LICENSE - License information for the project.
-📄 README.md - This documentation file.
-📄 submission_corrected.csv - CSV file with corrected submission results.
-📄 training_logs.pth - Saved PyTorch training logs for model analysis.
-📄 training_loss.png - Plot showing the training loss curve over epochs.
-📄 validation_accuracy.png - Plot showing validation accuracy over epochs.
-📄 log.txt - Training log containing epoch-wise loss and accuracy.
-📄 miniproject_spring25.pdf - Project structure and documentation.
-📄 resnetVariant_best.pth - Best saved model based on validation accuracy.
+```
+📦 dl_project_1
+├── 📂 data                  # Contains CIFAR-10 dataset
+├── 📂 old_files             # Archive of old versions
+├── 📂 src                   # Source code: model, training, and inference
+│   ├── 📄 train.py          # Training script
+│   ├── 📄 infer.py          # Inference script
+│   ├── 📄 resnet_variant.py # Modified ResNet architecture
+│   ├── 📄 utils.py          # Helper functions
+│   └── 📂 __pycache__/      # Python cache files
+├── 📄 .gitignore            # Files ignored by Git
+├── 📄 LICENSE               # Project license
+├── 📄 README.md             # Project documentation
+├── 📄 submission_corrected.csv # Corrected submission results
+├── 📄 training_logs.pth     # Saved PyTorch training logs
+├── 📄 training_loss.png     # Training loss curve
+├── 📄 validation_accuracy.png # Validation accuracy curve
+├── 📄 log.txt               # Training log with accuracy/loss per epoch
+├── 📄 miniproject_spring25.pdf # Project documentation
+└── 📄 resnetVariant_best.pth # Best saved model checkpoint
 
+```
 ---
 
 ## Prepare Dataset
