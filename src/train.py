@@ -5,7 +5,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 from resnet_variant import ResNetVariant
-from utils import CIFAR10Dataset, unpickle, augmented_transform, TransformWrapper
+from utils import CIFAR10Dataset, unpickle, augmented_transform, TransformWrapper, log_print, plot_training_curves
+
 
 # Define dataset directory and load CIFAR-10 batch files
 data_dir = './data/cifar-10-batches-py'
@@ -55,6 +56,11 @@ scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 start_epoch = 1
 num_epochs = 300
 
+# Lists to store training loss and validation accuracy
+train_losses = []
+val_accuracies = []
+learning_rates = []
+best_acc = 0.0
 # Training and validation loop
 for epoch in range(start_epoch, num_epochs + 1):
     # ------------------------------ Training ------------------------------
@@ -72,6 +78,10 @@ for epoch in range(start_epoch, num_epochs + 1):
         train_pbar.set_postfix(loss=running_loss / (train_pbar.n + 1))
     scheduler.step() # Update learning rate using scheduler(cosine annealing)
 
+    # Store training loss and learning rate
+    train_losses.append(running_loss / len(train_loader))
+    learning_rates.append(optimizer.param_groups[0]['lr'])
+
     # ------------------------------ Validation ------------------------------
     model.eval()
     correct, total = 0, 0
@@ -83,10 +93,27 @@ for epoch in range(start_epoch, num_epochs + 1):
             correct += (preds == labels).sum().item()
             total += labels.size(0)
             val_pbar.set_postfix(acc=correct / total)
-    acc = correct / total
-    print(f'Epoch {epoch}, Loss: {running_loss / len(train_loader):.4f}, Acc: {acc:.4%}')
+    acc = correct / total           # Calculate validation accuracy
+    val_accuracies.append(acc)      # Store validation accuracy
+
+    log_print(f'Epoch {epoch}, Loss: {running_loss / len(train_loader):.4f}, Acc: {acc:.4%}')
 
     # Save model checkpoint every 10 epochs
     if epoch % 10 == 0 or epoch == num_epochs:
         torch.save(model.state_dict(), f'resnet_epoch{epoch}.pth')
-        print(f"Epoch {epoch}: Model saved")
+        log_print(f"Epoch {epoch}: Model saved")
+
+    # Save best model
+    if acc > best_acc:
+        best_acc = acc
+        torch.save(model.state_dict(), 'resnetVariant_best.pth')
+        log_print(f"New best model found! Accuracy: {best_acc:.4%}. Model saved as resnetVariant_best.pth")
+
+log_print("Training complete!")
+
+# Save training logs to "training_logs.pth"
+torch.save({'train_losses': train_losses, 'val_accuracies': val_accuracies, 'learning_rates': learning_rates},
+           'training_logs.pth')
+
+# Plot training curves
+plot_training_curves('training_logs.pth')

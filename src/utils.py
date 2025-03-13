@@ -3,6 +3,22 @@ from PIL import Image
 import torchvision.transforms as transforms
 import pickle
 import numpy as np
+import logging
+import matplotlib.pyplot as plt
+import torch
+
+# Set up logging
+logging.basicConfig(
+    filename='log.txt',  # specify the log file name
+    level=logging.INFO,  # set logging level to INFO
+    format='%(asctime)s - %(levelname)s - %(message)s',  # specify log format
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# define a function to print and log messages
+def log_print(message):
+    print(message)  # print to console
+    logging.info(message)  # save to log file
 
 # Function to load CIFAR-10 data from pickle files
 def unpickle(file):
@@ -73,3 +89,46 @@ class CIFAR10TestDatasetWithID(Dataset):
         if self.transform:
             img = self.transform(img)
         return img, self.ids[idx]
+
+# Function to plot training curves 
+def plot_training_curves(log_file='training_logs.pth'):
+    '''
+    Function to plot training curves from a log file.
+    Args:
+        log_file (str): Path to the log file containing training logs.
+    '''
+    logs = torch.load(log_file)
+    train_losses = logs['train_losses']
+    val_accuracies = logs['val_accuracies']
+    learning_rates = logs['learning_rates']
+    epochs = range(1, len(train_losses) + 1)
+    
+    # Training loss curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, train_losses, label="Training Loss", color='blue')
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training Loss Curve")
+    plt.legend()
+    plt.savefig("training_loss.png")
+    plt.show()
+
+    # Validation accuracy curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, val_accuracies, label="Validation Accuracy", color='green')
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.title("Validation Accuracy Curve")
+    plt.legend()
+    plt.savefig("validation_accuracy.png")
+    plt.show()
+
+    # Learning rate schedule
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, learning_rates, label="Learning Rate", color='red')
+    plt.xlabel("Epochs")
+    plt.ylabel("Learning Rate")
+    plt.title("Learning Rate Schedule")
+    plt.legend()
+    plt.savefig("learning_rate.png")
+    plt.show()
