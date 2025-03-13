@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load trained ResNet model and set to evaluation mode
 model = ResNetVariant(num_classes=10).to(device)
-model.load_state_dict(torch.load('resnet_epoch100.pth'))
+model.load_state_dict(torch.load('resnet_epoch200.pth'))
 model.eval()
 
 # Define normalization transformation for test images

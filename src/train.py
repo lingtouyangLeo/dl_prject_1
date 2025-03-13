@@ -53,7 +53,7 @@ scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 # Training loop settings
 start_epoch = 1
-num_epochs = 200
+num_epochs = 300
 
 # Training and validation loop
 for epoch in range(start_epoch, num_epochs + 1):
